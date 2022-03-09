@@ -1,6 +1,19 @@
 // https://www.freecodecamp.org/news/the-least-squares-regression-method-explained/
 // https://pt.wikipedia.org/wiki/M%C3%A9todo_dos_m%C3%ADnimos_quadrados
 
+/* 
+* perceptron simples | função H(.)
+* y = H(x)
+* 
+* Erro - e(t) entre a saida desejada - d(t) e a saida gerada pela rede - y(t)
+* e(t) = d(t) - y(t)
+*
+*/
+
+// Fórmula da Porta lógica OR (Reta)
+// X2 = -(W1/W2)*X1 + THETA/W2
+// Para classes linearmente separáveis
+
 function EMG(data){
     this.grumpy = data.Grumpy;
     this.surpreso = data.Surpreso;
