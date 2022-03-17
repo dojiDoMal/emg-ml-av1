@@ -59,6 +59,21 @@ EnumRodadas.R10 = 'Rodada10';
     }
 }
 
+function costFunction(theta, X, y){
+    const m = y.length;
+
+    //let h = sigmoid(X * theta) //Acho que aqui e um produto interno
+
+    // ' = trasnposto
+    // (1 / m) * (-y' * log(h) - (1 - y)' * log(1 - h))
+    //const cost = (1/m)*(-y)
+    //return cost
+}
+
+function sigmoid(z){
+    return 1.0/(1+Math.exp(-z));
+}
+
 function calculateAverage(array){
     let sum = 0;
     let average = 0;
@@ -106,7 +121,7 @@ function random(seed) {
 }
 
 // Função responsável por plotar o grafico com os dados na tela
-function scatterPlot(objData, objLine){
+function scatterPlot(objData, objLine = {}){
     const traceGrumpy = {
         x: objData.grumpy[0],
         y: objData.grumpy[1],
@@ -127,7 +142,7 @@ function scatterPlot(objData, objLine){
 
     const traceData = [traceGrumpy, traceSurpreso];
 
-    if(objLine.traceLine){
+    if(!!objLine.traceLine){
         for (const l in objLine.lines) {
             if (Object.hasOwnProperty.call(objLine.lines, l)) {
                 const element = objLine.lines[l];

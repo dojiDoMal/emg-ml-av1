@@ -26,23 +26,46 @@ EMG.prototype.visualize = function EMG_visualize(){
     return JSON.parse(JSON.stringify(this));
 }
 
-function handleData(data, rodada){
+function handleData(data /*, rodada*/){
 
-    const seed = 15;
-    const dadosRodada = data[rodada];
-    let emgObject = new EMG(dadosRodada);
+    const seed = 45;
+
+    let arAuxGr0 = [];
+    let arAuxGr1 = [];
+    let arAuxSu0 = [];
+    let arAuxSu1 = [];
+
+    for (const rod in data) {
+        if (Object.hasOwnProperty.call(data, rod)) {
+            arAuxGr0 = arAuxGr0.concat(data[rod].Grumpy[0])
+            arAuxGr1 = arAuxGr1.concat(data[rod].Grumpy[1])   
+            arAuxSu0 = arAuxSu0.concat(data[rod].Surpreso[0])
+            arAuxSu1 = arAuxSu1.concat(data[rod].Surpreso[1])        
+        }
+    }
+    
+    const objD = {
+        Grumpy: [arAuxGr0, arAuxGr1],
+        Surpreso: [arAuxSu0, arAuxSu1]
+    }
+
+    //const dadosRodada = data[rodada];
+    let emgObject = new EMG(objD);
+    //console.log(dadosRodada)
+    //console.log(objD)
 
     // Embaralha os valores
-    emgObject.grumpy[0] = shuffle(emgObject.grumpy[0], seed);
-    emgObject.grumpy[1] = shuffle(emgObject.grumpy[1], seed);
+    //emgObject.grumpy[0] = shuffle(emgObject.grumpy[0], seed);
+    //emgObject.grumpy[1] = shuffle(emgObject.grumpy[1], seed);
 
-    emgObject.surpreso[0] = shuffle(emgObject.surpreso[0], seed);
-    emgObject.surpreso[1] = shuffle(emgObject.surpreso[1], seed);
+    //emgObject.surpreso[0] = shuffle(emgObject.surpreso[0], seed);
+    //emgObject.surpreso[1] = shuffle(emgObject.surpreso[1], seed);
 
     // Cria os modelos de regressão linear
+    /*
     const grumpyLR_model = calculateLinearRegression(emgObject.grumpy[0], emgObject.grumpy[1])
     const surpresoLR_model = calculateLinearRegression(emgObject.surpreso[0], emgObject.surpreso[1])
-
+    
     // Cria as retas para plotar no gráfico
     const grumpyLine = {
         a: grumpyLR_model.a,
@@ -59,22 +82,90 @@ function handleData(data, rodada){
         max: 3000,
         class: 'Surpreso'
     }
+    */
 
     // Cria os tensores
-    const grumpySensor1 = tf.tensor2d(emgObject.grumpy[0], [emgObject.grumpy[0].length, 1], 'int32');
-    const grumpySensor2 = tf.tensor2d(emgObject.grumpy[1], [emgObject.grumpy[1].length, 1], 'int32');
+    //const X_grumpy = tf.tensor2d([emgObject.grumpy[0], emgObject.grumpy[1]]);
+    const Y_grumpy = tf.ones([1, emgObject.grumpy[0].length]);
+    const grumpyFinal = tf.tensor2d([emgObject.grumpy[0], emgObject.grumpy[1], Y_grumpy.arraySync()]).transpose();
+    //   X1    X2   Y
+    // [1862, 1593, 1],
+    // [1885, 1655, 1],
+    // [1881, 1663, 1], ...
+    grumpyFinal.print()
 
-    const surpresoSensor1 = tf.tensor2d(emgObject.surpreso[0], [emgObject.surpreso[0].length, 1], 'int32');
-    const surpresoSensor2 = tf.tensor2d(emgObject.surpreso[1], [emgObject.surpreso[1].length, 1], 'int32');
+    //const X_surpreso = tf.tensor2d([emgObject.surpreso[0], emgObject.surpreso[1]]);
+    const Y_surpreso = tf.zeros([1, emgObject.surpreso[0].length]);
+    const surpresoFinal = tf.tensor2d([emgObject.surpreso[0], emgObject.surpreso[1], Y_surpreso.arraySync()]).transpose();
+    //   X1    X2   Y
+    // [592 , 529 , 0],
+    // [573 , 510 , 0],
+    // [554 , 496 , 0], ...
+    surpresoFinal.print()
+    
+    /*
+    let aux0 = grumpyFinal.transpose().arraySync()[0]
+    let aux1 = grumpyFinal.transpose().arraySync()[1]
+    let aux2 = grumpyFinal.transpose().arraySync()[2]
+    const shuffledGrumpy = tf.tensor([aux0, aux1, aux2]).transpose()
 
-    grumpySensor1.print();
-    grumpySensor2.print();
+    aux0 = surpresoFinal.transpose().arraySync()[0]
+    aux1 = surpresoFinal.transpose().arraySync()[1]
+    aux2 = surpresoFinal.transpose().arraySync()[2]
+    const shuffledSurpreso = tf.tensor([aux0, aux1, aux2]).transpose()
+    */
 
-    surpresoSensor1.print();
-    surpresoSensor2.print();
+    //const surpresoSensor1 = tf.tensor2d(emgObject.surpreso[0], [emgObject.surpreso[0].length, 1], 'int32');
+    //const surpresoSensor2 = tf.tensor2d(emgObject.surpreso[1], [emgObject.surpreso[1].length, 1], 'int32');
+
+    //X_grumpy.print();
+    //Y_grumpy.print();  
+    //grumpyFinal.print()  
+    //shuffledGrumpy.print()
+
+    //X_surpreso.print();
+    //Y_surpreso.print();
+    //surpresoFinal.print()
+    //shuffledSurpreso.print();
+
+    const axis = 0;
+    const finalTensor = grumpyFinal.concat(surpresoFinal, axis)
+    finalTensor.print()
+
+    
+    aux0 = shuffle(finalTensor.transpose().arraySync()[0], seed)
+    aux1 = shuffle(finalTensor.transpose().arraySync()[1], seed)
+    aux2 = shuffle(finalTensor.transpose().arraySync()[2], seed)
+    const shuffledFinal = tf.tensor([aux0, aux1, aux2]).transpose()
+    //console.log(JSON.stringify(shuffledFinal.arraySync()));
+    
+    //Calculo logistico
+    let X = tf.tensor([aux0, aux1]).transpose()
+    let y = tf.tensor([aux2]).transpose()
+    let m = aux2.length
+    let n = 2 // Dois sensores
+    
+    //One step is missing, before implementing the cost function. 
+    //The input matrix X needs to add an intercept term. 
+    //Only that way the matrix operations work for the dimensions of theta and matrix X.
+    //
+    //3. Em sala foi realizada uma discussao sobre a adicao de um vetor 
+    //coluna de 1s no inicio da matriz de dados X.
+    X = tf.concat([tf.ones([m, 1]), X], 1);
+
+    let theta = tf.zeros([n+1, 1]) // Array(n+1).fill().map(()=>[0]) // [[0], [0], [0]]
+    let cost = costFunction(theta, X, y)
+
+    theta.print()
+    X.print()
+    y.print()
+
+    console.log('cost: ', cost);
+    console.log('\n');
+    //console.log(grumpyFinal.arraySync()[0][0])
 
     // Plota o gráfico
-    scatterPlot(emgObject, {traceLine: true, lines: [grumpyLine, surpresoLine]});
+    scatterPlot(emgObject /*, {traceLine: true, lines: [grumpyLine, surpresoLine]}*/);
 }
 
 getJsonData = async (filePath) => {
@@ -83,7 +174,7 @@ getJsonData = async (filePath) => {
     return data;
 }
 
-getJsonData('./emg.json').then((res) => handleData(res, EnumRodadas.R1));
+getJsonData('./emg.json').then((res) => handleData(res/*, EnumRodadas.R1*/));
 
 //console.log(dados)
 
