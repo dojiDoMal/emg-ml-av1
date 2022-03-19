@@ -26,9 +26,9 @@ EMG.prototype.visualize = function EMG_visualize(){
     return JSON.parse(JSON.stringify(this));
 }
 
-function handleData(data /*, rodada*/){
+function linearRegression(data){
 
-    const seed = 45;
+    let seed = 25;
 
     let arAuxGr0 = [];
     let arAuxGr1 = [];
@@ -36,6 +36,7 @@ function handleData(data /*, rodada*/){
     let arAuxSu1 = [];
 
     for (const rod in data) {
+        if(rod == "Rodada5") break;
         if (Object.hasOwnProperty.call(data, rod)) {
             arAuxGr0 = arAuxGr0.concat(data[rod].Grumpy[0])
             arAuxGr1 = arAuxGr1.concat(data[rod].Grumpy[1])   
@@ -44,106 +45,119 @@ function handleData(data /*, rodada*/){
         }
     }
     
-    const objD = {
+    const objData = {
         Grumpy: [arAuxGr0, arAuxGr1],
         Surpreso: [arAuxSu0, arAuxSu1]
     }
 
-    //const dadosRodada = data[rodada];
-    let emgObject = new EMG(objD);
-    //console.log(dadosRodada)
-    //console.log(objD)
-
-    // Embaralha os valores
-    //emgObject.grumpy[0] = shuffle(emgObject.grumpy[0], seed);
-    //emgObject.grumpy[1] = shuffle(emgObject.grumpy[1], seed);
-
-    //emgObject.surpreso[0] = shuffle(emgObject.surpreso[0], seed);
-    //emgObject.surpreso[1] = shuffle(emgObject.surpreso[1], seed);
-
-    // Cria os modelos de regressão linear
-    /*
-    const grumpyLR_model = calculateLinearRegression(emgObject.grumpy[0], emgObject.grumpy[1])
-    const surpresoLR_model = calculateLinearRegression(emgObject.surpreso[0], emgObject.surpreso[1])
+    let emgObject = new EMG(objData);
     
-    // Cria as retas para plotar no gráfico
-    const grumpyLine = {
-        a: grumpyLR_model.a,
-        b: grumpyLR_model.b,
-        min: 0,
-        max: 3000,
-        class: 'Grumpy'
-    }
-
-    const surpresoLine = {
-        a: surpresoLR_model.a,
-        b: surpresoLR_model.b,
-        min: 0,
-        max: 3000,
-        class: 'Surpreso'
-    }
-    */
-
     // Cria os tensores
-    //const X_grumpy = tf.tensor2d([emgObject.grumpy[0], emgObject.grumpy[1]]);
-    const Y_grumpy = tf.ones([1, emgObject.grumpy[0].length]);
+    const Y_grumpy = tf.ones([1, emgObject.grumpy[0].length*2]);
     const grumpyFinal = tf.tensor2d([emgObject.grumpy[0], emgObject.grumpy[1], Y_grumpy.arraySync()]).transpose();
     //   X1    X2   Y
     // [1862, 1593, 1],
     // [1885, 1655, 1],
     // [1881, 1663, 1], ...
-    grumpyFinal.print()
 
-    //const X_surpreso = tf.tensor2d([emgObject.surpreso[0], emgObject.surpreso[1]]);
-    const Y_surpreso = tf.zeros([1, emgObject.surpreso[0].length]);
+    const Y_surpreso = tf.zeros([1, emgObject.surpreso[0].length*2]);
     const surpresoFinal = tf.tensor2d([emgObject.surpreso[0], emgObject.surpreso[1], Y_surpreso.arraySync()]).transpose();
     //   X1    X2   Y
     // [592 , 529 , 0],
     // [573 , 510 , 0],
     // [554 , 496 , 0], ...
-    surpresoFinal.print()
     
-    /*
-    let aux0 = grumpyFinal.transpose().arraySync()[0]
-    let aux1 = grumpyFinal.transpose().arraySync()[1]
-    let aux2 = grumpyFinal.transpose().arraySync()[2]
-    const shuffledGrumpy = tf.tensor([aux0, aux1, aux2]).transpose()
-
-    aux0 = surpresoFinal.transpose().arraySync()[0]
-    aux1 = surpresoFinal.transpose().arraySync()[1]
-    aux2 = surpresoFinal.transpose().arraySync()[2]
-    const shuffledSurpreso = tf.tensor([aux0, aux1, aux2]).transpose()
-    */
-
-    //const surpresoSensor1 = tf.tensor2d(emgObject.surpreso[0], [emgObject.surpreso[0].length, 1], 'int32');
-    //const surpresoSensor2 = tf.tensor2d(emgObject.surpreso[1], [emgObject.surpreso[1].length, 1], 'int32');
-
-    //X_grumpy.print();
-    //Y_grumpy.print();  
-    //grumpyFinal.print()  
-    //shuffledGrumpy.print()
-
-    //X_surpreso.print();
-    //Y_surpreso.print();
-    //surpresoFinal.print()
-    //shuffledSurpreso.print();
-
+    // Dados são concatenados verticalmente
     const axis = 0;
     const finalTensor = grumpyFinal.concat(surpresoFinal, axis)
-    finalTensor.print()
+    const tensorFX1 = finalTensor.transpose().arraySync()[0];
+    const tensorFX2 = finalTensor.transpose().arraySync()[1];
+    const tensorFY = finalTensor.transpose().arraySync()[2];
 
+    const treino80 = tensorFX1.length*.8
+    const teste20 = tensorFX1.length*.2
+  
+    let rodadas = 5
+    let acuracia = []
+    let sensibilidade = []
+    let especificidade = []
     
-    aux0 = shuffle(finalTensor.transpose().arraySync()[0], seed)
-    aux1 = shuffle(finalTensor.transpose().arraySync()[1], seed)
-    aux2 = shuffle(finalTensor.transpose().arraySync()[2], seed)
-    const shuffledFinal = tf.tensor([aux0, aux1, aux2]).transpose()
-    //console.log(JSON.stringify(shuffledFinal.arraySync()));
-    
-    //Calculo logistico
-    let X = tf.tensor([aux0, aux1]).transpose()
-    let y = tf.tensor([aux2]).transpose()
-    let m = aux2.length
-    let n = 2 // Dois sensores
+    for (let i = 0; i < rodadas; i++) {
+            
+        // Dados sao embaralhados
+        let aux0 = shuffle( tensorFX1, seed )
+        let aux1 = shuffle( tensorFX2, seed )
+        let auxY = shuffle( tensorFY, seed )
+        seed++;    
+        // 1) a. Faca a implementacao do metodo dos minimos quadrados ordinario
+        const X = tf.tensor([aux0, aux1]).transpose()
+        //const y = tf.tensor([auxY]).transpose()
+        //let n = 2 // Dois sensores
+        
+        // Divide 80% para treino e 20% para teste
+        const Xtreino = tf.tensor( [aux0.slice(0,treino80), aux1.slice(0,treino80)] ).transpose()
+        //Xtreino.print(true)
+        const yTreino = tf.tensor( [auxY.slice(0,treino80)] ).transpose()
+        //yTreino.print(true)
+        const Xteste = tf.tensor( [aux0.slice(-teste20), aux1.slice(-teste20)] ).transpose()
+        //Xteste.print(true)
+        const yTeste = tf.tensor( [auxY.slice(-teste20)] ).transpose()
+        //yTeste.print(true)
+
+        // Calculo de W = (Xt*X)^-1 * XtY 
+        // Xt
+        const Xt = Xtreino.transpose()
+        // (Xt*X)^-1
+        const XtXinv = tf.tensor(
+            math.inv(
+                tf.matMul( Xt, Xtreino ).arraySync() 
+            ) 
+        )        
+        // XtY
+        const XtY = tf.matMul(Xt, yTreino)
+        const W = tf.matMul(XtXinv, XtY)
+
+        //document.getElementById('plotResult').innerText = tf.matMul(Xt, Xtreino)
+        
+        emgObject.params = {
+            w1: W.arraySync()[0],
+            w2: W.arraySync()[1],
+            theta: 0.5 
+        }
+
+        //ynovo = tf.matMul(Xteste, W)
+        //ynovo.print()
+
+        // Matriz de confusao
+        let VP = 0
+        let VN = 0
+        let FP = 0
+        let FN = 0
+
+        for (let i = 0; i < Xteste.shape[0]; i++) {
+            let previsao = tf.matMul( tf.tensor([Xteste.arraySync()[i]]), W ).arraySync()[0]
+            let real = yTeste.arraySync()[i]
+
+            // Aplica o degrau unitario nos valores obtidos 
+            // com o modelo e gera a matriz de confusao
+            if (unitStep(previsao) == real){
+                (real == 0 ? VN++ : VP++)
+            } else {
+                (real == 0 ? FP++ : FN++)
+            }        
+        }
+        
+        const matrizConfusao = tf.tensor( [[VP, FP],[FN, VN]] )
+        matrizConfusao.print()
+
+        acuracia.push( (VP+VN) / (VP+VN+FP+FN) )
+        sensibilidade.push( (VP) / (VP+FN) )
+        especificidade.push( (VN) / (VN+FP) )
+    }
+
+    console.log(acuracia)
+    console.log(sensibilidade)
+    console.log(especificidade)
     
     //One step is missing, before implementing the cost function. 
     //The input matrix X needs to add an intercept term. 
@@ -151,21 +165,10 @@ function handleData(data /*, rodada*/){
     //
     //3. Em sala foi realizada uma discussao sobre a adicao de um vetor 
     //coluna de 1s no inicio da matriz de dados X.
-    X = tf.concat([tf.ones([m, 1]), X], 1);
-
-    let theta = tf.zeros([n+1, 1]) // Array(n+1).fill().map(()=>[0]) // [[0], [0], [0]]
-    let cost = costFunction(theta, X, y)
-
-    theta.print()
-    X.print()
-    y.print()
-
-    console.log('cost: ', cost);
-    console.log('\n');
-    //console.log(grumpyFinal.arraySync()[0][0])
+    //X = tf.concat([tf.ones([m, 1]), X], 1);
 
     // Plota o gráfico
-    scatterPlot(emgObject /*, {traceLine: true, lines: [grumpyLine, surpresoLine]}*/);
+    scatterPlot(emgObject);
 }
 
 getJsonData = async (filePath) => {
@@ -174,7 +177,7 @@ getJsonData = async (filePath) => {
     return data;
 }
 
-getJsonData('./emg.json').then((res) => handleData(res/*, EnumRodadas.R1*/));
+getJsonData('./emg.json').then((res) => linearRegression(res));
 
 //console.log(dados)
 

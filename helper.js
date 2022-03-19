@@ -64,14 +64,19 @@ function costFunction(theta, X, y){
 
     //let h = sigmoid(X * theta) //Acho que aqui e um produto interno
 
-    // ' = trasnposto
+    // ' = transposto
     // (1 / m) * (-y' * log(h) - (1 - y)' * log(1 - h))
     //const cost = (1/m)*(-y)
     //return cost
 }
 
 function sigmoid(z){
-    return 1.0/(1+Math.exp(-z));
+    return 1/(1+Math.exp(-z));
+}
+
+function unitStep(x){
+    return x >= 0.5 ? 1 : 0
+    //return 1 * (x > 0);
 }
 
 function calculateAverage(array){
@@ -121,7 +126,7 @@ function random(seed) {
 }
 
 // Função responsável por plotar o grafico com os dados na tela
-function scatterPlot(objData, objLine = {}){
+function scatterPlot(objData){
     const traceGrumpy = {
         x: objData.grumpy[0],
         y: objData.grumpy[1],
@@ -140,27 +145,40 @@ function scatterPlot(objData, objLine = {}){
         marker: {size: 5}       
     }
 
-    const traceData = [traceGrumpy, traceSurpreso];
+    let x1 = []
+    let x2 = []
 
-    if(!!objLine.traceLine){
-        for (const l in objLine.lines) {
-            if (Object.hasOwnProperty.call(objLine.lines, l)) {
-                const element = objLine.lines[l];
-                const xMin = element.min;
-                const yMin = element.min*element.b + element.a
-                const xMax = element.max;
-                const yMax = element.max*element.b + element.a
+    const w1 = objData.params.w1
+    const w2 = objData.params.w2
+    const theta = objData.params.theta
+    console.log(objData)
 
-                const traceLine = {
-                    x: [xMin, xMax],
-                    y: [yMin, yMax],
-                    type: 'scatter',
-                    name: 'Line ' + element.class,
-                }
-                traceData.push(traceLine)                
-            }
-        }
-    }    
+    for (let i = 0; i < 3000; i++) {
+        x1.push(i)
+        x2.push( (-(w1/w2)*i) + (theta/w2) )        
+    } 
+    
+    const linhaClasses = {
+        x: x1,
+        y: x2,
+        type: 'scatter',
+        name: 'Separador',
+        marker: {size: 3}    
+    }
 
-    Plotly.newPlot('plot', traceData, {responsive: true})
+    const layout = {
+        xaxis: {
+            autorange: false,
+            range: [0,3000]
+        },
+        yaxis: {
+            autorange: false,
+            range: [0,2500]
+        }    
+    }
+
+    const traceData = [traceGrumpy, traceSurpreso, linhaClasses];   
+
+    Plotly.newPlot('plot', traceData, layout, {responsive: true})
+    
 }
