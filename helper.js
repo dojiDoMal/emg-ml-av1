@@ -97,6 +97,38 @@ function calculateAverageDiff(array, average){
     return diff;
 }
 
+function normalize(arr){
+    const max = math.max(arr);
+    const min = math.min(arr);
+
+    for (let i = 0; i < arr.length; i++) {
+        arr[i] = (arr[i] - min) / (max - min);        
+    }
+
+    return arr;
+}
+
+function geraCSVcomDownload(data, length){
+    let csvFileData = []
+
+    for (let i = 0; i < length; i++) {
+        csvFileData.push( [data[0][i], data[1][i], data[2][i]] )
+    }
+
+    let csv = "Acurácia,Sensibilidade,Especificidade\n";
+
+    csvFileData.forEach((row) => {
+        csv += row.join(',');
+        csv += "\n";
+    })
+
+    let downloadCSV = document.createElement('a');  
+    downloadCSV.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);  
+    downloadCSV.target = '_blank';  
+    downloadCSV.download = 'DadosEstatisticos.csv';  
+    downloadCSV.click(); 
+}
+
 /**
  * Permite embaralhar um array de forma determinável por meio de uma seed.
  * @param {array} array O array que deverá ser embaralhado 
@@ -127,6 +159,7 @@ function random(seed) {
 
 // Função responsável por plotar o grafico com os dados na tela
 function scatterPlot(objData){
+
     const traceGrumpy = {
         x: objData.grumpy[0],
         y: objData.grumpy[1],
@@ -153,7 +186,7 @@ function scatterPlot(objData){
     const theta = objData.params.theta
     console.log(objData)
 
-    for (let i = 0; i < 3000; i++) {
+    for (let i = 0; i < 250; i++) {
         x1.push(i)
         x2.push( (-(w1/w2)*i) + (theta/w2) )        
     } 
@@ -169,11 +202,11 @@ function scatterPlot(objData){
     const layout = {
         xaxis: {
             autorange: false,
-            range: [0,3000]
+            range: [0,1.1]
         },
         yaxis: {
             autorange: false,
-            range: [0,2500]
+            range: [0,1.1]
         }    
     }
 
