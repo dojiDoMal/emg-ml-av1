@@ -59,17 +59,6 @@ EnumRodadas.R10 = 'Rodada10';
     }
 }
 
-function costFunction(theta, X, y){
-    const m = y.length;
-
-    //let h = sigmoid(X * theta) //Acho que aqui e um produto interno
-
-    // ' = transposto
-    // (1 / m) * (-y' * log(h) - (1 - y)' * log(1 - h))
-    //const cost = (1/m)*(-y)
-    //return cost
-}
-
 function sigmoid(z){
     return 1/(1+Math.exp(-z));
 }
@@ -77,6 +66,10 @@ function sigmoid(z){
 function unitStep(x){
     return x >= 0.5 ? 1 : 0
     //return 1 * (x > 0);
+}
+
+function signal(x){
+    return x >= 0 ? 1 : -1;
 }
 
 function calculateAverage(array){
@@ -184,7 +177,6 @@ function scatterPlot(objData){
     const w1 = objData.params.w1
     const w2 = objData.params.w2
     const theta = objData.params.theta
-    console.log(objData)
 
     for (let i = 0; i < 250; i++) {
         x1.push(i)
