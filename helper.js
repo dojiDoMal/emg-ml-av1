@@ -90,6 +90,11 @@ function calculateAverageDiff(array, average){
     return diff;
 }
 
+function sig(z){
+    var bottom = math.add(1, math.exp(math.multiply(-1, z)));
+    return math.dotDivide(1, bottom);
+};
+
 function normalize(arr){
     const max = math.max(arr);
     const min = math.min(arr);

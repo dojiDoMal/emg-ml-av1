@@ -36,7 +36,7 @@ function simplePerceptron(data){
     let arAuxSu1 = [];
 
     for (const rod in data) {
-        if(rod == "Rodada2") break;
+        if(rod == "Rodada6") break;
         if (Object.hasOwnProperty.call(data, rod)) {
             arAuxGr0 = arAuxGr0.concat(data[rod].Grumpy[0])
             arAuxGr1 = arAuxGr1.concat(data[rod].Grumpy[1])   
@@ -104,12 +104,14 @@ function simplePerceptron(data){
 
     const learningRate = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.9,1]
   
-    let rodadas = 1
+    let rodadas = 100
     let acuracia = []
     let sensibilidade = []
     let especificidade = []
+    let Wp = null;
     
     for (let i = 0; i < rodadas; i++) {
+        console.log( `rodada: ${i}`)
             
         // Dados sao embaralhados
         let aux0 = shuffle( tensorFX1, seed )
@@ -127,15 +129,15 @@ function simplePerceptron(data){
         //yTreino.print(true)
 
         const Xteste = tf.tensor( [aux0.slice(-teste20), aux1.slice(-teste20)] ).transpose()
-        const Xt = tf.concat([tf.ones([Xteste.shape[0], 1]), Xteste], 1)
+        const Xt = tf.concat([tf.mul(tf.ones([Xteste.shape[0], 1]), -1), Xteste], 1)
         //Xt.print(true)
 
         const yTeste = tf.tensor( [auxY.slice(-teste20)] )
         //yTeste.print(true)
 
-        let Wp = [[0],[0],[0]]
         let erro = true;
-        let epochs = 0
+        Wp = [[0],[0],[0]];
+        //let epochs = 0
 
         while(erro){
             erro = false;
@@ -154,7 +156,7 @@ function simplePerceptron(data){
                 Wp = math.add(
                     Wp,
                     math.multiply(
-                        learningRate[1] * (yTreino.arraySync()[0][i] - y), xAmostraNorm
+                        learningRate[8] * (yTreino.arraySync()[0][i] - y), xAmostraNorm
                     )
                 )
                 if(yTreino.arraySync()[0][i] != y){
@@ -162,19 +164,8 @@ function simplePerceptron(data){
                 } 
                 
             }  
-            epochs++;
-            console.log( "epoca: " + epochs + " | " + Wp[0][0].toFixed(2)+", "+Wp[1][0].toFixed(2)+", "+Wp[2][0].toFixed(2))
-            //if(epochs == 20) break;
+            //epochs++;
         }
-
-        emgObject.params = {
-            w1: Wp[1],
-            w2: Wp[2],
-            theta: Wp[0] 
-        }
-
-        // Plota o gráfico
-        scatterPlot(emgObject); 
         
         // Garbage collection
         Xtreino.dispose();
@@ -188,9 +179,10 @@ function simplePerceptron(data){
       
         for (let i = 0; i < Xt.shape[0]; i++) {
 
-            // TODO: tentar normalizar o vetor Xt e ver se da certo
             let previsao = tf.dot( Xt.arraySync()[i], Wp ).arraySync()[0]  
+            
             let real = yTeste.arraySync()[0][i] 
+
             //console.log(previsao)
             // Aplica o degrau unitario nos valores obtidos 
             // com o modelo e gera a matriz de confusao
@@ -222,6 +214,17 @@ function simplePerceptron(data){
     //console.log(sensibilidade)
     //console.log(especificidade)
 
+    /*
+    emgObject.params = {
+        w1: Wp[1],
+        w2: Wp[2],
+        theta: Wp[0] 
+    }
+
+    // Plota o gráfico
+    scatterPlot(emgObject); 
+    */
+
     // Garbage Collection
     tensorFX1 = null;
     tensorFX2 = null;
@@ -231,7 +234,7 @@ function simplePerceptron(data){
     // Acuracia, sensibilidade e especificidade
     let Data = [acuracia, sensibilidade, especificidade]
     let length = acuracia.length
-    //geraCSVcomDownload(Data, length)
+    geraCSVcomDownload(Data, length)
 
     // Garbage Collection
     acuracia = null;
