@@ -59,6 +59,25 @@ EnumRodadas.R10 = 'Rodada10';
     }
 }
 
+function eqm(x, y, w){
+    let eqm = 0;
+
+    for (let i = 0; i < x.shape[1]; i++) {
+
+        let xAmostra = [[x.arraySync()[0][i]], [x.arraySync()[1][i]], [x.arraySync()[2][i]]];
+        let norm = math.norm(math.transpose(xAmostra)[0]);
+        let xAmostraNorm = math.multiply(
+            xAmostra,
+            1/norm
+        )
+
+        let u = tf.dot(math.transpose(w), xAmostraNorm).arraySync()[0]
+        eqm += math.pow((y.arraySync()[0][i] - u), 2)        
+    }
+
+    return eqm / (2 * x.shape[1])
+}
+
 function sigmoid(z){
     return 1/(1+Math.exp(-z));
 }

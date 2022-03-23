@@ -26,6 +26,223 @@ EMG.prototype.visualize = function EMG_visualize(){
     return JSON.parse(JSON.stringify(this));
 }
 
+
+function adaline(data){
+
+    let seed = 0;
+
+    let arAuxGr0 = [];
+    let arAuxGr1 = [];
+    let arAuxSu0 = [];
+    let arAuxSu1 = [];
+
+    for (const rod in data) {
+        if(rod == "Rodada2") break;
+        if (Object.hasOwnProperty.call(data, rod)) {
+            arAuxGr0 = arAuxGr0.concat(data[rod].Grumpy[0])
+            arAuxGr1 = arAuxGr1.concat(data[rod].Grumpy[1])   
+            arAuxSu0 = arAuxSu0.concat(data[rod].Surpreso[0])
+            arAuxSu1 = arAuxSu1.concat(data[rod].Surpreso[1])        
+        }
+    }
+
+    // normalização dos dados
+    const arAuxX = normalize( arAuxGr0.concat(arAuxSu0) )
+    arAuxGr0 = arAuxX.slice(0, arAuxGr0.length ) 
+    arAuxSu0 = arAuxX.slice(arAuxSu0.length, arAuxX.length)
+
+    const arAuxY = normalize( arAuxGr1.concat(arAuxSu1) )
+    arAuxGr1 = arAuxY.slice(0, arAuxGr1.length ) 
+    arAuxSu1 = arAuxY.slice(arAuxSu1.length, arAuxY.length)
+        
+    const objData = {
+        Grumpy: [arAuxGr0, arAuxGr1],
+        Surpreso: [arAuxSu0, arAuxSu1]
+    }
+
+    let emgObject = new EMG(objData);
+    
+    // Cria os tensores
+    const Y_grumpy = tf.ones([1, emgObject.grumpy[0].length*2]);
+    const grumpyFinal = tf.tensor2d([emgObject.grumpy[0], emgObject.grumpy[1], Y_grumpy.arraySync()]).transpose();
+    //   X1    X2   Y
+    // [1862, 1593, 1],
+    // [1885, 1655, 1],
+    // [1881, 1663, 1], ...
+
+    // Garbage collection
+    Y_grumpy.dispose();
+
+    const Y_surpreso = tf.mul(tf.ones([1, emgObject.surpreso[0].length*2]), -1);
+    const surpresoFinal = tf.tensor2d([emgObject.surpreso[0], emgObject.surpreso[1], Y_surpreso.arraySync()]).transpose();
+    //   X1    X2   Y
+    // [592 , 529 , -1],
+    // [573 , 510 , -1],
+    // [554 , 496 , -1], ...
+    
+    // Garbage collection
+    Y_surpreso.dispose();
+    
+    
+    // Dados são concatenados verticalmente
+    const axis = 0;
+    const finalTensor = grumpyFinal.concat(surpresoFinal, axis)
+    //finalTensor.print(true)
+
+    // Garbage collection
+    surpresoFinal.dispose();
+    grumpyFinal.dispose();
+
+    let tensorFX1 = finalTensor.transpose().arraySync()[0] ;
+    let tensorFX2 = finalTensor.transpose().arraySync()[1] ;
+    let tensorFY = finalTensor.transpose().arraySync()[2] ;
+
+    // Garbage collection
+    finalTensor.dispose();
+
+    const treino80 = tensorFX1.length*.8
+    const teste20 = tensorFX1.length*.2
+
+    const learningRate = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.9,1]
+  
+    let rodadas = 1
+    let acuracia = []
+    let sensibilidade = []
+    let especificidade = []
+    let Wp = null;
+    
+    for (let i = 0; i < rodadas; i++) {
+            
+        // Dados sao embaralhados
+        let aux0 = shuffle( tensorFX1, seed )
+        let aux1 = shuffle( tensorFX2, seed )
+        let auxY = shuffle( tensorFY, seed )
+        seed++;  
+        
+        // Divide 80% para treino e 20% para teste
+        const Xtreino = tf.tensor( [aux0.slice(0,treino80), aux1.slice(0,treino80)] ).transpose()
+        const Xf = tf.concat([tf.mul(tf.ones([Xtreino.shape[0], 1]), -1), Xtreino], 1).transpose() 
+        //Xf.print(true)
+        //Xtreino.print(true)
+
+        const yTreino = tf.tensor( [auxY.slice(0,treino80)] )
+        //yTreino.print(true)
+
+        const Xteste = tf.tensor( [aux0.slice(-teste20), aux1.slice(-teste20)] ).transpose()
+        const Xt = tf.concat([tf.mul(tf.ones([Xteste.shape[0], 1]), -1), Xteste], 1)
+        //Xt.print(true)
+
+        const yTeste = tf.tensor( [auxY.slice(-teste20)] )
+        //yTeste.print(true)
+
+        let erro = true;
+        Wp = [[0],[0],[0]];
+        let epochs = 0
+        let maxEpochs = 15;
+        let precision = 0.001
+        let eqmAnterior = 0;
+        let eqmAtual = 0;
+
+        do{
+            eqmAnterior = eqm(Xf, yTreino, Wp)
+            for(let i = 0; i < Xf.shape[1]; i++){
+                let xAmostra = [[Xf.arraySync()[0][i]], [Xf.arraySync()[1][i]], [Xf.arraySync()[2][i]]];
+                let norm = math.norm(math.transpose(xAmostra)[0]);
+                let xAmostraNorm = math.multiply(
+                    xAmostra,
+                    1/norm
+                )
+                
+                let u = tf.dot(math.transpose(Wp), xAmostraNorm).arraySync()[0]                
+                Wp = math.add(
+                    Wp,
+                    math.multiply(
+                        learningRate[5] * (yTreino.arraySync()[0][i] - u), xAmostraNorm
+                    )
+                )                
+            }  
+            epochs++;
+            eqmAtual = eqm(Xf, yTreino, Wp)
+            console.log(epochs)
+        } while( (math.abs(eqmAtual - eqmAnterior) <= precision) || epochs == maxEpochs )
+        
+        // Garbage collection
+        Xtreino.dispose();
+        yTreino.dispose();
+
+        // Matriz de confusao
+        let VP = 0
+        let VN = 0
+        let FP = 0
+        let FN = 0
+      
+        for (let i = 0; i < Xt.shape[0]; i++) {
+
+            let previsao = tf.dot( Xt.arraySync()[i], Wp ).arraySync()[0]  
+            
+            let real = yTeste.arraySync()[0][i] 
+
+            //console.log(previsao)
+            // Aplica o degrau unitario nos valores obtidos 
+            // com o modelo e gera a matriz de confusao
+            if (signal(previsao) == real){
+                (real == -1 ? VN++ : VP++)
+            } else {
+                (real == -1 ? FP++ : FN++)
+            }    
+            
+            // Garbage collection
+            previsao = null
+            real = null;
+        }
+
+        // Garbage collection
+        Xteste.dispose();
+        Xt.dispose();
+        yTeste.dispose();
+        
+        //const matrizConfusao = tf.tensor( [[VP, FP],[FN, VN]] )
+        //matrizConfusao.print()
+
+        acuracia.push( (VP+VN) / (VP+VN+FP+FN) )
+        sensibilidade.push( (VP) / (VP+FN) )
+        especificidade.push( (VN) / (VN+FP) )
+    }
+
+    //console.log(acuracia)
+    //console.log(sensibilidade)
+    //console.log(especificidade)
+
+    /*
+    emgObject.params = {
+        w1: Wp[1],
+        w2: Wp[2],
+        theta: Wp[0] 
+    }
+
+    // Plota o gráfico
+    scatterPlot(emgObject); 
+    */
+
+    // Garbage Collection
+    tensorFX1 = null;
+    tensorFX2 = null;
+    tensorFY = null;
+    
+    // Gera arquivo CSV com os dados estatisticos:
+    // Acuracia, sensibilidade e especificidade
+    let Data = [acuracia, sensibilidade, especificidade]
+    let length = acuracia.length
+    geraCSVcomDownload(Data, length)
+
+    // Garbage Collection
+    acuracia = null;
+    sensibilidade = null;
+    especificidade = null;
+    emgObject = null;
+
+}
+
 function simplePerceptron(data){
 
     let seed = 0;
@@ -866,4 +1083,7 @@ getJsonData = async (filePath) => {
 //getJsonData('./emg.json').then((res) => lambdaLinearRegressionOnes(res));
 
 // Perceptron Simples
-getJsonData('./emg.json').then((res) => simplePerceptron(res));
+//getJsonData('./emg.json').then((res) => simplePerceptron(res));
+
+// ADALINE
+getJsonData('./emg.json').then((res) => adaline(res));
